@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta Vehicular</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 60px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .title {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .item {
+      margin: 10px 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .value {
+      color: #555;
+    }
+
+    .error {
+      text-align: center;
+      color: red;
+      font-weight: bold;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <div id="content" class="card">
+    <p class="loading">Cargando información...</p>
+  </div>
+</div>
+
+<script>
+  const API_URL = "http://localhost:8000";
+
+  const params = new URLSearchParams(window.location.search);
+  const codigo = params.get("codigo");
+
+  const content = document.getElementById("content");
+
+  if (!codigo) {
+    content.innerHTML = `<p class="error">No se proporcionó código</p>`;
+  } else {
+    fetch(`${API_URL}/vehiculo/${codigo}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error("No encontrado");
+        }
+        return res.json();
+      })
+      .then(data => {
+        content.innerHTML = `
+          <div class="title">Información del Vehículo</div>
+
+          <div class="item">
+            <span class="label">Placa:</span>
+            <span class="value">${data.placa || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Estado:</span>
+            <span class="value">${data.estado || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Empresa:</span>
+            <span class="value">${data.empresa || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Código:</span>
+            <span class="value">${data.codigo || "-"}</span>
+          </div>
+
+          <hr>
+
+          <div class="item">
+            <span class="label">Propietario:</span>
+            <span class="value">${data.nombres_p || ""} ${data.apellidos_p || ""}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">DNI Propietario:</span>
+            <span class="value">${data.dni_p || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Conductor:</span>
+            <span class="value">${data.nombres_c || ""} ${data.apellidos_c || ""}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">DNI Conductor:</span>
+            <span class="value">${data.dni_c || "-"}</span>
+          </div>
+
+          <hr>
+
+          <div class="item">
+            <span class="label">Vehículo:</span>
+            <span class="value">${data.marca || ""} ${data.modelo || ""}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Color:</span>
+            <span class="value">${data.color || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Año:</span>
+            <span class="value">${data.anio || "-"}</span>
+          </div>
+
+          <div class="item">
+            <span class="label">Seguro:</span>
+            <span class="value">${data.seguro || "-"}</span>
+          </div>
+        `;
+      })
+      .catch(error => {
+        content.innerHTML = `<p class="error">Vehículo no encontrado</p>`;
+      });
+  }
+</script>
+
+</body>
+</html>
