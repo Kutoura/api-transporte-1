@@ -1,8 +1,10 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
 import psycopg2
+
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -16,13 +18,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-conn = psycopg2.connect(
-    dbname="transporte",
-    user="postgres",
-    password="1234",
-    host="localhost",
-    port="5432"
-)
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+conn = psycopg2.connect(DATABASE_URL)
 
 # 🔹 MAPEO
 def map_vehiculo(row):
