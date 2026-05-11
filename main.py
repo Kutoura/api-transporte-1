@@ -139,3 +139,18 @@ def eliminar(codigo: str):
     conn.commit()
 
     return {"mensaje": "Eliminado"}
+
+@app.get("/vehiculos/empresa/{empresa}")
+def listar_por_empresa(empresa: str):
+
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT * FROM vehiculos
+        WHERE persona_juridica = %s
+        ORDER BY codigo ASC
+    """, (empresa,))
+
+    rows = cur.fetchall()
+
+    return [map_vehiculo(r) for r in rows]
