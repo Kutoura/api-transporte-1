@@ -154,3 +154,18 @@ def listar_por_empresa(empresa: str):
     rows = cur.fetchall()
 
     return [map_vehiculo(r) for r in rows]
+
+@app.get("/empresas")
+def listar_empresas():
+
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT DISTINCT persona_juridica
+        FROM vehiculos
+        ORDER BY persona_juridica ASC
+    """)
+
+    rows = cur.fetchall()
+
+    return [r[0] for r in rows]
