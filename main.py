@@ -118,16 +118,27 @@ def actualizar(codigo: str, data: dict):
 
     cur.execute("""
         UPDATE vehiculos
-        SET placa=%s, estado=%s, persona_juridica=%s
+        SET placa=%s,
+            estado=%s,
+            persona_juridica=%s,
+            nombres_p=%s,
+            apellidos_p=%s,
+            nombres_c=%s,
+            apellidos_c=%s
         WHERE codigo=%s
     """, (
         data.get("placa"),
         data.get("estado"),
         data.get("empresa"),
+        data.get("nombres_p"),
+        data.get("apellidos_p"),
+        data.get("nombres_c"),
+        data.get("apellidos_c"),
         codigo
     ))
 
     conn.commit()
+
     return {"mensaje": "Actualizado"}
 
 # 🔹 ELIMINAR
