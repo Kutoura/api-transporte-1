@@ -7,16 +7,19 @@ import psycopg2
 
 
 app = FastAPI()
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 🔥 CORS VA AQUÍ
+
+# 🔥 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # en producción se restringe
+    allow_origins=["*"],  # En producción se recomienda restringir
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 load_dotenv()
 
@@ -24,7 +27,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 conn = psycopg2.connect(DATABASE_URL)
 
-# 🔹 MAPEO
+
+# ============================================================
+# 🔹 MAPEO DE VEHÍCULO
+# ============================================================
+
 def map_vehiculo(row):
     return {
         "id": row[0],
@@ -50,41 +57,88 @@ def map_vehiculo(row):
         "seguro": row[20]
     }
 
-# 🔥 GET por codigo (QR)
+
+# ============================================================
+# 🔥 GET VEHÍCULO POR CÓDIGO (QR)
+# ============================================================
+
 @app.get("/vehiculo/{codigo}")
 def get_vehiculo(codigo: str):
+
     cur = conn.cursor()
-    cur.execute("SELECT * FROM vehiculos WHERE codigo = %s", (codigo,))
+
+    cur.execute(
+        "SELECT * FROM vehiculos WHERE codigo = %s",
+        (codigo,)
+    )
+
     row = cur.fetchone()
 
     if not row:
-        raise HTTPException(status_code=404, detail="No encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail="No encontrado"
+        )
 
     return map_vehiculo(row)
 
-# 🔹 LISTAR
+
+# ============================================================
+# 🔹 LISTAR VEHÍCULOS
+# ============================================================
+
 @app.get("/vehiculos")
 def listar():
+
     cur = conn.cursor()
-    cur.execute("SELECT * FROM vehiculos LIMIT 50")
+
+    cur.execute(
+        "SELECT * FROM vehiculos LIMIT 50"
+    )
+
     rows = cur.fetchall()
+
     return [map_vehiculo(r) for r in rows]
 
-# 🔹 CREAR
+
+# ============================================================
+# 🔹 CREAR VEHÍCULO
+# ============================================================
+
 @app.post("/vehiculo")
 def crear(data: dict):
+
     cur = conn.cursor()
 
     cur.execute("""
         INSERT INTO vehiculos (
-            placa, estado, indice, persona_juridica, n_padron, codigo,
-            dni_p, nombres_p, apellidos_p, direccion_p,
-            dni_c, nombres_c, apellidos_c, direccion_c,
-            licencia, marca, modelo, color, anio, seguro
-        ) VALUES (%s, %s, %s, %s, %s, %s,
-                  %s, %s, %s, %s,
-                  %s, %s, %s, %s,
-                  %s, %s, %s, %s, %s, %s)
+            placa,
+            estado,
+            indice,
+            persona_juridica,
+            n_padron,
+            codigo,
+            dni_p,
+            nombres_p,
+            apellidos_p,
+            direccion_p,
+            dni_c,
+            nombres_c,
+            apellidos_c,
+            direccion_c,
+            licencia,
+            marca,
+            modelo,
+            color,
+            anio,
+            seguro
+        )
+        VALUES (
+            %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s, %s, %s, %s
+        )
     """, (
         data.get("placa"),
         data.get("estado"),
@@ -109,47 +163,79 @@ def crear(data: dict):
     ))
 
     conn.commit()
-    return {"mensaje": "Vehículo creado"}
 
-# 🔹 ACTUALIZAR
+    return {
+        "mensaje": "Vehículo creado"
+    }
+
+
+# ============================================================
+# 🔹 ACTUALIZAR VEHÍCULO
+# ============================================================
+
 @app.put("/vehiculo/{codigo}")
 def actualizar(codigo: str, data: dict):
+
     cur = conn.cursor()
 
     cur.execute("""
         UPDATE vehiculos
-        SET placa=%s,
-            estado=%s,
-            persona_juridica=%s,
-            nombres_p=%s,
-            apellidos_p=%s,
-            nombres_c=%s,
-            apellidos_c=%s
-        WHERE codigo=%s
+        SET
+            placa = %s,
+            estado = %s,
+            persona_juridica = %s
+        WHERE codigo = %s
     """, (
         data.get("placa"),
         data.get("estado"),
         data.get("empresa"),
-        data.get("nombres_p"),
-        data.get("apellidos_p"),
-        data.get("nombres_c"),
-        data.get("apellidos_c"),
         codigo
     ))
 
     conn.commit()
 
-    return {"mensaje": "Actualizado"}
+    return {
+        "mensaje": "Actualizado"
+    }
 
-# 🔹 ELIMINAR
+
+# ============================================================
+# 🔹 ELIMINAR VEHÍCULO
+# ============================================================
+
 @app.delete("/vehiculo/{codigo}")
 def eliminar(codigo: str):
+
     cur = conn.cursor()
 
-    cur.execute("DELETE FROM vehiculos WHERE codigo = %s", (codigo,))
+    cur.execute(
+        "DELETE FROM vehiculos WHERE codigo = %s",
+        (codigo,)
+    )
+
     conn.commit()
 
-    return {"mensaje": "Eliminado"}
+    return {
+        "mensaje": "Eliminado"
+    }
+
+
+# ============================================================
+# 🔹 LISTAR VEHÍCULOS POR EMPRESA / ASOCIACIÓN
+# ============================================================
+#
+# Se utiliza TRIM() para ignorar espacios al inicio y al final
+# del nombre de la persona jurídica.
+#
+# Ejemplo:
+#
+# "ASOCIACION DE MOTOTAXIS SANTA ROSA DE LIMA EL AGUSTINO"
+#
+# será considerado igual que:
+#
+# "ASOCIACION DE MOTOTAXIS SANTA ROSA DE LIMA EL AGUSTINO "
+#
+# ============================================================
 
 @app.get("/vehiculos/empresa/{empresa}")
 def listar_por_empresa(empresa: str):
@@ -157,8 +243,9 @@ def listar_por_empresa(empresa: str):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT * FROM vehiculos
-        WHERE persona_juridica = %s
+        SELECT *
+        FROM vehiculos
+        WHERE TRIM(persona_juridica) = TRIM(%s)
         ORDER BY codigo ASC
     """, (empresa,))
 
@@ -166,15 +253,29 @@ def listar_por_empresa(empresa: str):
 
     return [map_vehiculo(r) for r in rows]
 
+
+# ============================================================
+# 🔹 LISTAR EMPRESAS / ASOCIACIONES
+# ============================================================
+#
+# TRIM() elimina espacios innecesarios al inicio y al final.
+# Esto evita que el frontend reciba nombres como:
+#
+# "SANTA ROSA DE LIMA EL AGUSTINO "
+#
+# ============================================================
+
 @app.get("/empresas")
 def listar_empresas():
 
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT DISTINCT persona_juridica
+        SELECT DISTINCT TRIM(persona_juridica)
         FROM vehiculos
-        ORDER BY persona_juridica ASC
+        WHERE persona_juridica IS NOT NULL
+          AND TRIM(persona_juridica) <> ''
+        ORDER BY TRIM(persona_juridica) ASC
     """)
 
     rows = cur.fetchall()
