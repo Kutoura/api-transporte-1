@@ -288,3 +288,28 @@ def listar_empresas():
     rows = cur.fetchall()
 
     return [r[0] for r in rows]
+
+@app.get("/vehiculos/disponibles")
+def listar_disponibles():
+
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, codigo
+        FROM vehiculos
+        WHERE
+            (persona_juridica IS NULL OR TRIM(persona_juridica) = '')
+            AND
+            (placa IS NULL OR TRIM(placa) = '')
+        ORDER BY id ASC
+    """)
+
+    rows = cur.fetchall()
+
+    return [
+        {
+            "id": row[0],
+            "codigo": row[1]
+        }
+        for row in rows
+    ]
