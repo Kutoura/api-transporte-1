@@ -313,3 +313,97 @@ def listar_disponibles():
         }
         for row in rows
     ]
+
+@app.put("/vehiculos/asignar")
+def asignar_vehiculos(data: dict):
+
+    cur = conn.cursor()
+
+    empresa = data.get("empresa")
+    vehiculos = data.get("vehiculos", [])
+
+    if not empresa:
+        raise HTTPException(
+            status_code=400,
+            detail="Debe indicar la empresa o asociación"
+        )
+
+    if not vehiculos:
+        raise HTTPException(
+            status_code=400,
+            detail="No se enviaron vehículos"
+        )
+
+    actualizados = []
+
+    try:
+
+        for vehiculo in vehiculos:
+
+            codigo = vehiculo.get("codigo")
+
+            if not codigo:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Uno de los vehículos no tiene código"
+                )
+
+            cur.execute("""
+                UPDATE vehiculos
+                SET
+                    persona_juridica = %s,
+                    placa = %s,
+                    dni_p = %s,
+                    nombres_p = %s,
+                    apellidos_p = %s,
+                    dni_c = %s,
+                    nombres_c = %s,
+                    apellidos_c = %s
+                WHERE codigo = %s
+                AND (
+                    persona_juridica IS NULL
+                    OR TRIM(persona_juridica) = ''
+                )
+                AND (
+                    placa IS NULL
+                    OR TRIM(placa) = ''
+                )
+            """, (
+                empresa,
+                vehiculo.get("placa"),
+                vehiculo.get("dni_p"),
+                vehiculo.get("nombres_p"),
+                vehiculo.get("apellidos_p"),
+                vehiculo.get("dni_c"),
+                vehiculo.get("nombres_c"),
+                vehiculo.get("apellidos_c"),
+                codigo
+            ))
+
+            if cur.rowcount == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El vehículo {codigo} no está disponible"
+                )
+
+            actualizados.append(codigo)
+
+        conn.commit()
+
+        return {
+            "mensaje": "Vehículos asignados correctamente",
+            "empresa": empresa,
+            "vehiculos_actualizados": actualizados
+        }
+
+    except Exception as e:
+
+        conn.rollback()
+
+        if isinstance(e, HTTPException):
+            raise e
+
+        raise HTTPException(
+            status_code=500,
+            detail="Error al asignar los vehículos"
+        )
